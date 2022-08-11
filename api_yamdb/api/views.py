@@ -1,28 +1,20 @@
-from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
-
-from reviews.models import Comment, Review
-
-from .serializers import (CommentSerializer, ReviewSerializer)
-
-
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, status, viewsets
+from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import (LimitOffsetPagination,
+                                       PageNumberPagination)
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from reviews.models import User
+from reviews.models import Category, Comment, Genre, Review, Title, User
 
-from .permissions import IsAdmin
-from .serializers import (
-    RegisterDataSerializer,
-    TokenSerializer,
-    UserEditSerializer,
-    UserSerializer
-)
+from .permissions import IsAdmin, OwnerCheckOrAdmin
+from .serializers import (CategorySerializer, CommentSerializer,
+                          GenreSerializer, RegisterDataSerializer,
+                          ReviewSerializer, TitleSerializer,
+                          TitleSerializerView, TokenSerializer,
+                          UserEditSerializer, UserSerializer)
 
 
 @api_view(["POST"])
@@ -101,28 +93,76 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
+    permission_classes = (OwnerCheckOrAdmin,)
+    queryset = Review.objects.all()
 
     def get_queryset(self):
-        title_id = self.kwargs.get('title_id')
-        return Review.objects.filter(title_id=title_id)
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        queryset = title.review.all()
+        return queryset
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        serializer.save(author=self.request.user, title=title)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
+    permission_classes = (OwnerCheckOrAdmin,)
+    queryset = Comment.objects.all()
 
     def get_queryset(self):
-        review_id = self.kwargs.get('review_id')
-        title_id = self.kwargs.get('title_id')
-        return Comment.objects.filter(
-            title_id=title_id, review_id=review_id
-        )
+        review = get_object_or_404(
+            Review,
+            id=self.kwargs.get('review_id'))
+        return review.comment.all()
 
     def perform_create(self, serializer):
-        review_id = self.kwargs.get('review_id')
-        serializer.save(
-            author=self.request.user,
-            review_id=get_object_or_404(Review, review_id=review_id)
+        review = get_object_or_404(
+            Review,
+            id=self.kwargs.get('review_id'))
+        serializer.save(author=self.request.user, review=review)
+
+
+class CategoryViewSet(mixins.CreateModelMixin,
+                      mixins.DestroyModelMixin,
+                      mixins.ListModelMixin,
+                      viewsets.GenericViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = (IsAdmin,)
+    pagination_class = LimitOffsetPagination
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = get_object_or_404(
+            queryset=self.queryset,
+            slug=kwargs.get('pk')
+        )
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class GenreViewSet(CategoryViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitleSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        #все что выше родной метод, а вот дальше мое извращение
+        self.serializer_class = TitleSerializerView
+        serializer = self.get_serializer(serializer.instance)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers
         )

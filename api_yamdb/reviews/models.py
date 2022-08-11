@@ -1,6 +1,6 @@
-from django.db import models
-from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 
 class User(AbstractUser):
@@ -87,17 +87,30 @@ class Title(models.Model):
         Genre,
         blank=True,
         null=True,
-        # on_delete=models.SET_NULL,
+        through='GenreTitle',
         related_name='genries'
     )
     description = models.TextField()
 
 
-class Review(models.Model):
+class GenreTitle(models.Model):
+    genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
     title = models.ForeignKey(Title, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'{self.genre} {self.title}'
+
+
+class Review(models.Model):
+    title = models.ForeignKey(
+        Title, on_delete=models.CASCADE,
+        related_name='review'
+    )
     text = models.TextField('Текст')
-    author = models.ForeignKey(User, on_delete=models.CASCADE,
-                               related_name='reviews')
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='review'
+    )
     score = models.IntegerField(
         validators=(MinValueValidator(1),
                     MaxValueValidator(10)),
@@ -105,9 +118,23 @@ class Review(models.Model):
     )
     pub_date = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['title', 'author'],
+                name='unique_author_review'
+            )
+        ]
+
 
 class Comment(models.Model):
-    review = models.ForeignKey(Review, on_delete=models.CASCADE)
+    review = models.ForeignKey(
+        Review, on_delete=models.CASCADE,
+        related_name='comment'
+    )
     text = models.TextField(max_length=300)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='comment'
+    )
     pub_date = models.DateTimeField(auto_now_add=True)
