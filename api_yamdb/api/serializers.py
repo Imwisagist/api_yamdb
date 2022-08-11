@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from django.core.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
-from Reviews.models import Comment, Review, Title
+from reviews.models import Comment, Review, Title
 
 from reviews.models import User
 
@@ -64,7 +64,7 @@ class TokenSerializer(serializers.Serializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(slug_field='username', read_only=True)
-    title = SlugRelatedField(slug_field='description')
+    title = SlugRelatedField(slug_field='description', read_only=True)
 
     class Meta:
         fields = '__all__'

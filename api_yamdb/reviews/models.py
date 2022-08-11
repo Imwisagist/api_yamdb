@@ -72,7 +72,7 @@ class Genre(models.Model):
 class Title(models.Model):
     name = models.CharField(max_length=255)
     year = models.PositiveIntegerField(
-        default=0,
+        default=1,
         validators=[MaxValueValidator(3000),
                     MinValueValidator(1)]
     )
@@ -87,7 +87,7 @@ class Title(models.Model):
         Genre,
         blank=True,
         null=True,
-        on_delete=models.SET_NULL,
+        # on_delete=models.SET_NULL,
         related_name='genries'
     )
     description = models.TextField()
