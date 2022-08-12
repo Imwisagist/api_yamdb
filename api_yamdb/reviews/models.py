@@ -121,7 +121,7 @@ class Review(models.Model):
     score = models.IntegerField(
         validators=(MinValueValidator(1),
                     MaxValueValidator(10)),
-        error_messages={'validators': 'Оценки могут быть от 1 до 10'}
+        error_messages={'validators': 'Оценки могут быть от 1 до 10'},
     )
     pub_date = models.DateTimeField(auto_now_add=True)
 
