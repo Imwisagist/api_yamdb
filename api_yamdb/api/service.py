@@ -1,14 +1,26 @@
-from django_filters import rest_framework as filters
+from django_filters import rest_framework
+from rest_framework import filters, mixins, viewsets
 
+from .permissions import IsAdminOrReadOnly
 from reviews.models import Title
 
 
-class TitleFilter(filters.FilterSet):
-    category = filters.CharFilter(field_name='category__slug')
-    genre = filters.CharFilter(field_name='genre__slug')
-    name = filters.CharFilter(field_name='name', lookup_expr='contains')
-    year = filters.NumberFilter()
+class TitleFilter(rest_framework.FilterSet):
+    category = rest_framework.CharFilter(field_name='category__slug')
+    genre = rest_framework.CharFilter(field_name='genre__slug')
+    name = rest_framework.CharFilter(field_name='name', lookup_expr='contains')
+    year = rest_framework.NumberFilter()
 
     class Meta:
         model = Title
-        fields = ['category', 'genre', 'name', 'year']
+        fields = ('category', 'genre', 'name', 'year',)
+
+
+class GetPostDeleteViewSet(mixins.CreateModelMixin,
+                           mixins.DestroyModelMixin,
+                           mixins.ListModelMixin,
+                           viewsets.GenericViewSet):
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    lookup_field = 'slug'

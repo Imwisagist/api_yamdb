@@ -113,3 +113,6 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+MAX_LENGTH_NAME = 255
+SLUG_LENGTH = 50
