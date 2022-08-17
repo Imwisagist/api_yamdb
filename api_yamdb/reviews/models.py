@@ -101,31 +101,34 @@ class GenreTitle(models.Model):
         return f'{self.genre} {self.title}'
 
 
-class Review(models.Model):
-    title = models.ForeignKey(Title, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f'{self.genre} {self.title}'
-
-
-class Review(models.Model):
-    title = models.ForeignKey(
-        Title, on_delete=models.CASCADE,
-        related_name='review'
-    )
-    text = models.TextField('Текст')
+class ReviewAndComment(models.Model):
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='review'
-    )
-    score = models.IntegerField(
-        validators=(MinValueValidator(1),
-                    MaxValueValidator(10)),
-        error_messages={'validators': 'Оценки могут быть от 1 до 10'},
+        verbose_name='Автор'
     )
     pub_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        abstract = True
+        ordering = ['-pub_date']
+        default_related_name = "%(class)s"
+        verbose_name = '%(class)s'
+
+
+class Review(ReviewAndComment):
+    title = models.ForeignKey(
+        Title, on_delete=models.CASCADE,
+        verbose_name='Произведение'
+    )
+    text = models.TextField('Текст')
+    score = models.PositiveSmallIntegerField(
+        validators=(MinValueValidator(1),
+                    MaxValueValidator(10)),
+        error_messages={'validators': 'Оценки могут быть от 1 до 10'},
+        default=1
+    )
+
+    class Meta(ReviewAndComment.Meta):
         constraints = [
             models.UniqueConstraint(
                 fields=['title', 'author'],
@@ -133,15 +136,19 @@ class Review(models.Model):
             )
         ]
 
+    def __str__(self):
+        return self.text[0:15]
 
-class Comment(models.Model):
+
+class Comment(ReviewAndComment):
     review = models.ForeignKey(
         Review, on_delete=models.CASCADE,
-        related_name='comment'
+        verbose_name='Отзыв'
     )
     text = models.TextField(max_length=300)
-    author = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='comment'
-    )
-    pub_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta(ReviewAndComment.Meta):
+        pass
+
+    def __str__(self):
+        return self.text[0:15]
