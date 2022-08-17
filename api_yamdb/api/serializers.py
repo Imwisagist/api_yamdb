@@ -3,10 +3,10 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
-from reviews.models import (Category, Comment, Genre, GenreTitle, Review,
+
+from reviews.models import (Category, Comment, Genre, Review,
                             Title, User)
-from django.db.models import Count, F, Sum
-from django.core.validators import MaxValueValidator, MinValueValidator
+
 
 class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
