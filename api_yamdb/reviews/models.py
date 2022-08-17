@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -59,38 +60,63 @@ class User(AbstractUser):
         ]
 
 
-class Category(models.Model):
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True, max_length=50)
+class NameSlugModel(models.Model):
+    name = models.CharField(
+        max_length=settings.MAX_LENGTH_NAME,
+        verbose_name='Название')
+    slug = models.SlugField(
+        unique=True,
+        max_length=settings.SLUG_LENGTH,
+        verbose_name='Слаг')
+
+    class Meta:
+        abstract = True
+        ordering = ['name']
+
+    def __str__(self):
+        return f'{self.name}'
 
 
-class Genre(models.Model):
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True, max_length=50)
+class Category(NameSlugModel):
+    class Meta(NameSlugModel.Meta):
+        verbose_name = 'Категории'
+
+
+class Genre(NameSlugModel):
+    class Meta(NameSlugModel.Meta):
+        verbose_name = 'Жанры'
 
 
 class Title(models.Model):
-    name = models.CharField(max_length=255)
-    year = models.PositiveIntegerField(
+    name = models.CharField(
+        max_length=settings.MAX_LENGTH_NAME,
+        verbose_name='Название')
+    year = models.SmallIntegerField(
         default=1,
         validators=[MaxValueValidator(3000),
-                    MinValueValidator(1)]
+                    MinValueValidator(1)],
+        verbose_name='Год'
     )
     category = models.ForeignKey(
         Category,
         blank=True,
         null=True,
         on_delete=models.SET_NULL,
-        related_name='categories'
+        related_name='categories',
+        verbose_name='Категория',
     )
     genre = models.ManyToManyField(
         Genre,
         blank=True,
         null=True,
         through='GenreTitle',
-        related_name='genries'
+        related_name='genries',
+        verbose_name='Жанр',
     )
-    description = models.TextField()
+    description = models.TextField(verbose_name='Описание')
+
+    def __str__(self):
+        return f'{self.name}'
 
 
 class GenreTitle(models.Model):

@@ -93,16 +93,16 @@ class CommentSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        exclude = ['id']
+        exclude = ('id',)
 
 
 class GenreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Genre
-        exclude = ['id']
+        exclude = ('id',)
 
 
-class TitleSerializer(serializers.ModelSerializer):
+class TitleSerializerPost(serializers.ModelSerializer):
     category = SlugRelatedField(
         slug_field='slug',
         queryset=Category.objects.all()
@@ -112,35 +112,19 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Genre.objects.all(),
         many=True
     )
+    year = serializers.IntegerField(min_value=1, max_value=3000)
 
     class Meta:
         model = Title
         fields = '__all__'
 
-    def create(self, validated_data):
-        genres = validated_data.pop('genre')
-        title = Title.objects.create(**validated_data)
 
-        for genre_data in genres:
-            GenreTitle.objects.create(
-                genre=genre_data, title=title)
-        return title
-
-
-class TitleSerializerView(serializers.ModelSerializer):
+class TitleSerializerGet(serializers.ModelSerializer):
     category = CategorySerializer()
     genre = GenreSerializer(many=True)
-    rating = serializers.SerializerMethodField()
+    rating = serializers.IntegerField()
 
     class Meta:
         model = Title
         fields = '__all__'
-
-    def get_rating(self, obj):
-        sum_dic = Review.objects.filter(title=obj).aggregate(Sum(F('score')))
-        sum = sum_dic.get('score__sum')
-        if not sum:
-            return None
-        count = Review.objects.filter(title=obj).count()
-        return int(sum / count)
-        #return obj.review_set.aggregate(Sum('score'))
+        read_only_fields = ('__all__',)

@@ -1,3 +1,4 @@
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, viewsets
@@ -15,8 +16,7 @@ from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.pagination import (LimitOffsetPagination,
-                                       PageNumberPagination)
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Category, Comment, Genre, Review, Title, User
@@ -24,9 +24,11 @@ from reviews.models import Category, Comment, Genre, Review, Title, User
 from .permissions import IsAdmin, OwnerOrAdmin, IsAdminOrReadOnly
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, RegisterDataSerializer,
-                          ReviewSerializer, TitleSerializer,
-                          TitleSerializerView, TokenSerializer,
+                          ReviewSerializer, TitleSerializerGet,
+                          TitleSerializerPost, TokenSerializer,
                           UserEditSerializer, UserSerializer)
+
+from .service import GetPostDeleteViewSet, TitleFilter
 
 
 @api_view(["POST"])
@@ -134,59 +136,32 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user, review=get_review(self))
 
 
-class CategoryViewSet(mixins.CreateModelMixin,
-                    mixins.DestroyModelMixin,
-                    mixins.ListModelMixin,
-                    viewsets.GenericViewSet):
+class CategoryViewSet(GetPostDeleteViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (IsAdminOrReadOnly,)
-    pagination_class = LimitOffsetPagination
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-
-    def destroy(self, request, *args, **kwargs):
-        #instance = get_object_or_404_rest(queryset=self.queryset,slug=kwargs.get('pk'))
-        instance = get_object_or_404(self.queryset,slug=kwargs.get('pk'))
-        instance.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class GenreViewSet(CategoryViewSet):
+class GenreViewSet(GetPostDeleteViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
-    serializer_class = TitleSerializerView
+    queryset = Title.objects.annotate(rating=Avg('review__score'))
+    serializer_class = TitleSerializerGet
     permission_classes = (IsAdminOrReadOnly,)
-    pagination_class = LimitOffsetPagination
-    filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = TitleFilter
+    ordering_fields = ('name',)
+    ordering = ('name',)
+    action_serializer_classes = {"create": TitleSerializerPost,
+                                 "update": TitleSerializerPost,
+                                 "retrieve": TitleSerializerGet,
+                                 "list": TitleSerializerGet,
+                                 "partial_update": TitleSerializerPost}
 
-    def create(self, request, *args, **kwargs):
-        self.serializer_class = TitleSerializer
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        #все что выше родной метод, а вот дальше мое извращение
-        self.serializer_class = TitleSerializerView
-        serializer = self.get_serializer(serializer.instance)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        self.serializer_class = TitleSerializer
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        if getattr(instance, '_prefetched_objects_cache', None):
-            instance._prefetched_objects_cache = {}
-
-        self.serializer_class = TitleSerializerView
-        serializer = self.get_serializer(serializer.instance)
-        return Response(serializer.data)
+    def get_serializer_class(self):
+        try:
+            return self.action_serializer_classes[self.action]
+        except (KeyError, AttributeError):
+            return super(TitleViewSet, self).get_serializer_class()
