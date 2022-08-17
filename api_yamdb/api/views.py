@@ -5,18 +5,17 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
+from api.permissions import IsAdmin, OwnerOrAdmin, IsAdminOrReadOnly
+from api.serializers import (
+    CategorySerializer, CommentSerializer, GenreSerializer,
+    RegisterDataSerializer, ReviewSerializer, TitleSerializerGet,
+    TitleSerializerPost, TokenSerializer, UserEditSerializer, UserSerializer
+)
+from api.service import GetPostDeleteViewSet, TitleFilter
 from reviews.models import Category, Comment, Genre, Review, Title, User
-from .permissions import IsAdmin, OwnerOrAdmin, IsAdminOrReadOnly
-from .serializers import (CategorySerializer, CommentSerializer,
-                          GenreSerializer, RegisterDataSerializer,
-                          ReviewSerializer, TitleSerializerGet,
-                          TitleSerializerPost, TokenSerializer,
-                          UserEditSerializer, UserSerializer)
-from .service import GetPostDeleteViewSet, TitleFilter
 
 
 @api_view(["POST"])
@@ -31,8 +30,8 @@ def register(request):
     )
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
-        subject="YaMDb registration",
-        message=f"Your confirmation code: {confirmation_code}",
+        subject="YaMDb регистрация",
+        message=f"Ваш код подтверждения: {confirmation_code}",
         from_email=None,
         recipient_list=[user.email],
     )
@@ -71,7 +70,6 @@ class UserViewSet(viewsets.ModelViewSet):
     lookup_field = "username"
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    pagination_class = PageNumberPagination
     permission_classes = (IsAdmin,)
 
     @action(
