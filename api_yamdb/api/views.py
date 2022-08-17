@@ -1,21 +1,33 @@
 from django.db.models import Avg
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, viewsets
+from rest_framework.pagination import LimitOffsetPagination
+
+from reviews.models import Category, Genre, Title, Comment, Review
+
+from .serializers import (CommentSerializer, ReviewSerializer,
+                         CategorySerializer, GenreSerializer, 
+                         TitleSerializer, TitleSerializerView)
+from .service import TitleFilter
+
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, permissions, status, viewsets
+from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-
 from reviews.models import Category, Comment, Genre, Review, Title, User
-from .permissions import IsAdmin, OwnerCheckOrAdmin, IsAdminOrReadOnly
+
+from .permissions import IsAdmin, OwnerOrAdmin, IsAdminOrReadOnly
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, RegisterDataSerializer,
                           ReviewSerializer, TitleSerializerGet,
                           TitleSerializerPost, TokenSerializer,
                           UserEditSerializer, UserSerializer)
+
 from .service import GetPostDeleteViewSet, TitleFilter
 
 
@@ -59,6 +71,14 @@ def get_jwt_token(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+def get_title(self):
+    return get_object_or_404(Title, id=self.kwargs.get('title_id'))
+
+
+def get_review(self):
+    return get_object_or_404(Review, id=self.kwargs.get('review_id'))
+
+
 class UserViewSet(viewsets.ModelViewSet):
     lookup_field = "username"
     queryset = User.objects.all()
@@ -95,34 +115,25 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = (OwnerCheckOrAdmin,)
+    permission_classes = (OwnerOrAdmin,)
 
     def get_queryset(self):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        queryset = title.review.all()
-        return queryset
+        return get_title(self).review.all()
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(author=self.request.user, title=get_title(self))
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = (OwnerCheckOrAdmin,)
+    permission_classes = (OwnerOrAdmin,)
     queryset = Comment.objects.all()
 
     def get_queryset(self):
-        review = get_object_or_404(
-            Review,
-            id=self.kwargs.get('review_id'))
-        return review.comment.all()
+        return get_review(self).comment.all()
 
     def perform_create(self, serializer):
-        review = get_object_or_404(
-            Review,
-            id=self.kwargs.get('review_id'))
-        serializer.save(author=self.request.user, review=review)
+        serializer.save(author=self.request.user, review=get_review(self))
 
 
 class CategoryViewSet(GetPostDeleteViewSet):
