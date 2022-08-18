@@ -47,11 +47,9 @@ class UserEditSerializer(serializers.ModelSerializer):
 
 class RegisterDataSerializer(serializers.HyperlinkedModelSerializer):
     username = serializers.CharField(
-        validators=[UniqueValidator(queryset=User.objects.all())],
         max_length=30, required=True
     )
     email = serializers.EmailField(
-        validators=[UniqueValidator(queryset=User.objects.all())],
         max_length=30,
         required=True,
     )

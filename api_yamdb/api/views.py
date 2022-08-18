@@ -4,9 +4,11 @@ from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
+from django.db.utils import IntegrityError
+from rest_framework.exceptions import ValidationError
 
 from api.permissions import IsAdmin, OwnerOrAdmin, IsAdminOrReadOnly
 from api.serializers import (
@@ -19,20 +21,20 @@ from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
 @api_view(["POST"])
-@permission_classes([permissions.AllowAny])
 def register(request):
     serializer = RegisterDataSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    serializer.save()
-    user = get_object_or_404(
-        User,
-        username=serializer.validated_data["username"]
-    )
+    try:
+        user, create = User.objects.get_or_create(
+            **serializer.validated_data
+        )
+    except IntegrityError:
+        raise ValidationError("Неверное имя пользователя или email")
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
         subject="YaMDb регистрация",
         message=f"Ваш код подтверждения: {confirmation_code}",
-        from_email=None,
+        from_email='admin@yamdb.com',
         recipient_list=[user.email],
     )
 
@@ -40,7 +42,6 @@ def register(request):
 
 
 @api_view(["POST"])
-@permission_classes([permissions.AllowAny])
 def get_jwt_token(request):
     serializer = TokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -83,20 +84,15 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer_class=UserEditSerializer,
     )
     def users_own_profile(self, request):
-        user = request.user
-        if request.method == "GET":
-            serializer = self.get_serializer(user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
         if request.method == "PATCH":
-            serializer = self.get_serializer(
-                user,
-                data=request.data,
-                partial=True
-            )
-            serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
