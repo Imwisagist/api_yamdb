@@ -6,6 +6,7 @@ from rest_framework.validators import UniqueValidator
 
 from reviews.models import (Category, Comment, Genre, Review,
                             Title, User)
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -75,20 +76,28 @@ class TokenSerializer(serializers.Serializer):
     )
 
 
+class ScoreSerializer(serializers.Serializer):
+    score = serializers.IntegerField(
+        validators=(MinValueValidator(1),
+                    MaxValueValidator(10)))
+
+
 class ReviewSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(slug_field='username', read_only=True)
     title = SlugRelatedField(slug_field='name', read_only=True)
+    score = ScoreSerializer
 
     class Meta:
         fields = '__all__'
         model = Review
 
     def validate(self, data):
-        title_id = self.context.get('view').kwargs.get('title_id')
         request = self.context['request']
-        if (request.method == 'POST'
+        if (request.method not in ('GET', "PATCH")
            and Review.objects.filter(
-            title=get_object_or_404(Title, pk=title_id),
+            title=get_object_or_404(
+                Title, pk=self.context.get('view').kwargs.get('title_id')
+            ),
                 author=request.user).exists()):
             raise ValidationError('Вы уже писали ревью')
         return data
