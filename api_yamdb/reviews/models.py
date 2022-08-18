@@ -1,10 +1,27 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import (
+    MaxValueValidator,
+    MinValueValidator,
+    RegexValidator
+)
 from django.db import models
 
 
-class User(AbstractUser):
+class UsernameValidatorMixin:
+    username = models.CharField(
+        max_length=150,
+        verbose_name='Имя пользователя',
+        unique=True,
+        null=True,
+        validators=[RegexValidator(
+            regex=r'^[\w.@+-]+$',
+            message='Имя пользователя содержит недопустимый символ'
+        )]
+    )
+
+
+class User(AbstractUser, UsernameValidatorMixin):
     ADMIN = 'admin'
     MODERATOR = 'moderator'
     USER = 'user'
@@ -17,12 +34,6 @@ class User(AbstractUser):
     email = models.EmailField(
         verbose_name='Адрес электронной почты',
         unique=True,
-    )
-    username = models.CharField(
-        verbose_name='Имя пользователя',
-        max_length=150,
-        null=True,
-        unique=True
     )
     role = models.CharField(
         verbose_name='Роль',

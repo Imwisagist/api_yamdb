@@ -5,17 +5,11 @@ from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
 
 from reviews.models import (Category, Comment, Genre, Review,
-                            Title, User)
+                            Title, User, UsernameValidatorMixin)
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 
-class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        min_length=3,
-        max_length=30,
-        validators=[UniqueValidator(queryset=User.objects.all())],
-        required=True,
-    )
+class UserSerializer(serializers.ModelSerializer, UsernameValidatorMixin):
     email = serializers.EmailField(
         max_length=30,
         validators=[UniqueValidator(queryset=User.objects.all())],
@@ -28,10 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
 
 
-class UserEditSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        min_length=3, max_length=30, required=True
-    )
+class UserEditSerializer(serializers.ModelSerializer, UsernameValidatorMixin):
     email = serializers.EmailField(
         max_length=30, required=True
     )
@@ -46,10 +37,9 @@ class UserEditSerializer(serializers.ModelSerializer):
         read_only_fields = ('role',)
 
 
-class RegisterDataSerializer(serializers.HyperlinkedModelSerializer):
-    username = serializers.CharField(
-        max_length=30, required=True
-    )
+class RegisterDataSerializer(
+    serializers.HyperlinkedModelSerializer, UsernameValidatorMixin
+):
     email = serializers.EmailField(
         max_length=30,
         required=True,
@@ -65,10 +55,8 @@ class RegisterDataSerializer(serializers.HyperlinkedModelSerializer):
         return value
 
 
-class TokenSerializer(serializers.Serializer):
-    username = serializers.CharField(
-        max_length=30, required=True
-    )
+class TokenSerializer(serializers.Serializer, UsernameValidatorMixin):
+    username = serializers.CharField(required=True)
     confirmation_code = serializers.CharField(
         max_length=50, required=True
     )
