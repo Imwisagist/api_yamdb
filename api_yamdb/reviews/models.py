@@ -1,32 +1,55 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import (
+    MaxValueValidator,
+    MinValueValidator,
+    RegexValidator
+)
 from django.db import models
+from django.utils import timezone
+from rest_framework import serializers
+
+from api_yamdb.settings import DEFAULT_EMAIL_LENGTH, DEFAULT_FIELD_LENGTH
 
 
-class User(AbstractUser):
+class UsernameValidatorMixin:
+    username = models.CharField(
+        max_length=DEFAULT_FIELD_LENGTH,
+        verbose_name='Имя пользователя',
+        unique=True,
+        null=True,
+        validators=[RegexValidator(
+            regex=r'^[\w.@+-]+$',
+            message='Имя пользователя содержит недопустимый символ'
+        )]
+    )
+
+    def validate_username(self, value):
+        if value.lower() == "me":
+            raise serializers.ValidationError(
+                "Имя пользователя 'me'- не доступно"
+            )
+        return value
+
+
+class User(AbstractUser, UsernameValidatorMixin):
     ADMIN = 'admin'
     MODERATOR = 'moderator'
     USER = 'user'
-    ROLES = [
+    ROLES = (
         (ADMIN, 'Administrator'),
         (MODERATOR, 'Moderator'),
         (USER, 'User'),
-    ]
+    )
 
     email = models.EmailField(
         verbose_name='Адрес электронной почты',
         unique=True,
-    )
-    username = models.CharField(
-        verbose_name='Имя пользователя',
-        max_length=150,
-        null=True,
-        unique=True
+        max_length=DEFAULT_EMAIL_LENGTH
     )
     role = models.CharField(
         verbose_name='Роль',
-        max_length=50,
+        max_length=DEFAULT_FIELD_LENGTH,
         choices=ROLES,
         default=USER
     )
@@ -42,22 +65,23 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return self.role == self.ADMIN
+        return self.role == self.ADMIN or self.is_superuser or self.is_staff
+
+    @property
+    def is_user(self):
+        return self.role == self.USER
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+
+    REQUIRED_FIELDS = ['username', 'email']
 
     class Meta:
-        ordering = ['id']
+        ordering = ('id', )
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
-        constraints = [
-            models.CheckConstraint(
-                check=~models.Q(username__iexact="me"),
-                name="username_is_not_me"
-            )
-        ]
+    def __str__(self):
+        return self.username
 
 
 class NameSlugModel(models.Model):
@@ -91,10 +115,9 @@ class Title(models.Model):
     name = models.CharField(
         max_length=settings.MAX_LENGTH_NAME,
         verbose_name='Название')
-    year = models.SmallIntegerField(
+    year = models.PositiveSmallIntegerField(
         default=1,
-        validators=[MaxValueValidator(3000),
-                    MinValueValidator(1)],
+        validators=[MaxValueValidator(timezone.now().year)],
         verbose_name='Год'
     )
     category = models.ForeignKey(
@@ -136,12 +159,11 @@ class ReviewAndComment(models.Model):
         verbose_name='Автор'
     )
     pub_date = models.DateTimeField(auto_now_add=True)
+    text = models.TextField('Текст')
 
     class Meta:
         abstract = True
-        ordering = ['-pub_date']
-        default_related_name = "%(class)s"
-        verbose_name = '%(class)s'
+        ordering = ('-pub_date',)
 
 
 class Review(ReviewAndComment):
@@ -149,7 +171,6 @@ class Review(ReviewAndComment):
         Title, on_delete=models.CASCADE,
         verbose_name='Произведение'
     )
-    text = models.TextField('Текст')
     score = models.PositiveSmallIntegerField(
         validators=(MinValueValidator(1),
                     MaxValueValidator(10)),
@@ -164,6 +185,8 @@ class Review(ReviewAndComment):
                 name='unique_author_review'
             )
         ]
+        default_related_name = 'review'
+        verbose_name = 'Ревью'
 
     def __str__(self):
         return self.text[0:15]
@@ -174,10 +197,10 @@ class Comment(ReviewAndComment):
         Review, on_delete=models.CASCADE,
         verbose_name='Отзыв'
     )
-    text = models.TextField(max_length=300)
 
     class Meta(ReviewAndComment.Meta):
-        pass
+        default_related_name = 'comment'
+        verbose_name = 'Коментарий'
 
     def __str__(self):
         return self.text[0:15]
