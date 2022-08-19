@@ -8,7 +8,7 @@ from django.core.validators import (
 from django.db import models
 from rest_framework import serializers
 
-from api_yamdb.settings import *
+from api_yamdb.settings import DEFAULT_EMAIL_LENGTH, DEFAULT_FIELD_LENGTH
 
 
 class UsernameValidatorMixin:

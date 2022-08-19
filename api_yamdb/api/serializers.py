@@ -5,10 +5,9 @@ from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
 
-from api_yamdb.settings import *
+from api_yamdb.settings import DEFAULT_EMAIL_LENGTH, DEFAULT_FIELD_LENGTH
 from reviews.models import (Category, Comment, Genre, Review,
                             Title, User, UsernameValidatorMixin)
-from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class UserSerializer(serializers.ModelSerializer, UsernameValidatorMixin):
