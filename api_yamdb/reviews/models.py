@@ -6,11 +6,14 @@ from django.core.validators import (
     RegexValidator
 )
 from django.db import models
+from rest_framework import serializers
+
+from api_yamdb.settings import *
 
 
 class UsernameValidatorMixin:
     username = models.CharField(
-        max_length=150,
+        max_length=DEFAULT_FIELD_LENGTH,
         verbose_name='Имя пользователя',
         unique=True,
         null=True,
@@ -19,6 +22,13 @@ class UsernameValidatorMixin:
             message='Имя пользователя содержит недопустимый символ'
         )]
     )
+
+    def validate_username(self, value):
+        if value.lower() == "me":
+            raise serializers.ValidationError(
+                "Имя пользователя 'me'- не доступно"
+            )
+        return value
 
 
 class User(AbstractUser, UsernameValidatorMixin):
@@ -34,10 +44,11 @@ class User(AbstractUser, UsernameValidatorMixin):
     email = models.EmailField(
         verbose_name='Адрес электронной почты',
         unique=True,
+        max_length=DEFAULT_EMAIL_LENGTH
     )
     role = models.CharField(
         verbose_name='Роль',
-        max_length=50,
+        max_length=DEFAULT_FIELD_LENGTH,
         choices=ROLES,
         default=USER
     )
@@ -60,19 +71,13 @@ class User(AbstractUser, UsernameValidatorMixin):
         return self.role == self.USER
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+
+    REQUIRED_FIELDS = ['username', 'email']
 
     class Meta:
         ordering = ('id', )
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
-
-        constraints = [
-            models.CheckConstraint(
-                check=~models.Q(username__iexact="me"),
-                name="username_is_not_me"
-            )
-        ]
 
     def __str__(self):
         return self.username
@@ -89,7 +94,7 @@ class NameSlugModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ['name']
+        ordering = ('name', )
 
     def __str__(self):
         return f'{self.name}'
@@ -154,7 +159,7 @@ class ReviewAndComment(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ['-pub_date']
+        ordering = ('-pub_date', )
         default_related_name = "%(class)s"
         verbose_name = '%(class)s'
 

@@ -1,22 +1,25 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db.models import Avg
+from django.db.utils import IntegrityError
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action, api_view
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from django.db.utils import IntegrityError
-from rest_framework.exceptions import ValidationError
 
-from api.permissions import IsAdmin, OwnerOrAdmin, IsAdminOrReadOnly
+from api.permissions import (
+    IsAdmin, OwnerAdminModeratorOrReadOnly, IsAdminOrReadOnly
+)
 from api.serializers import (
     CategorySerializer, CommentSerializer, GenreSerializer,
     RegisterDataSerializer, ReviewSerializer, TitleSerializerGet,
     TitleSerializerPost, TokenSerializer, UserEditSerializer, UserSerializer
 )
 from api.service import GetPostDeleteViewSet, TitleFilter
+from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
@@ -34,7 +37,7 @@ def register(request):
     send_mail(
         subject="YaMDb регистрация",
         message=f"Ваш код подтверждения: {confirmation_code}",
-        from_email='admin@yamdb.com',
+        from_email=DEFAULT_FROM_EMAIL,
         recipient_list=[user.email],
     )
 
@@ -47,24 +50,16 @@ def get_jwt_token(request):
     serializer.is_valid(raise_exception=True)
     user = get_object_or_404(
         User,
-        username=serializer.validated_data["username"]
+        username=serializer.validated_data.get("username")
     )
 
     if default_token_generator.check_token(
-        user, serializer.validated_data["confirmation_code"]
+        user, serializer.validated_data.get("confirmation_code")
     ):
         token = AccessToken.for_user(user)
         return Response({"token": str(token)}, status=status.HTTP_200_OK)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-def get_title(self):
-    return get_object_or_404(Title, id=self.kwargs.get('title_id'))
-
-
-def get_review(self):
-    return get_object_or_404(Review, id=self.kwargs.get('review_id'))
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -97,25 +92,31 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = (OwnerOrAdmin,)
+    permission_classes = (OwnerAdminModeratorOrReadOnly,)
+
+    def get_title(self):
+        return get_object_or_404(Title, id=self.kwargs.get('title_id'))
 
     def get_queryset(self):
-        return get_title(self).review.all()
+        return self.get_title().review.all()
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user, title=get_title(self))
+        serializer.save(author=self.request.user, title=self.get_title())
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = (OwnerOrAdmin,)
+    permission_classes = (OwnerAdminModeratorOrReadOnly,)
     queryset = Comment.objects.all()
 
+    def get_review(self):
+        return get_object_or_404(Review, id=self.kwargs.get('review_id'))
+
     def get_queryset(self):
-        return get_review(self).comment.all()
+        return self.get_review().comment.all()
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user, review=get_review(self))
+        serializer.save(author=self.request.user, review=self.get_review())
 
 
 class CategoryViewSet(GetPostDeleteViewSet):

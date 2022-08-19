@@ -97,6 +97,10 @@ EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
 
 DEFAULT_FROM_EMAIL = 'admin@yamdb.com'
 
+DEFAULT_EMAIL_LENGTH = 254
+
+DEFAULT_FIELD_LENGTH = 150
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
