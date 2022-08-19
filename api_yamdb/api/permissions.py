@@ -13,7 +13,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
                 or IsAdmin().has_permission(request, view))
 
 
-class OwnerOrAdmin(permissions.BasePermission):
+class IsOwnerOrAdminOrReadOnly(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return (request.method in permissions.SAFE_METHODS

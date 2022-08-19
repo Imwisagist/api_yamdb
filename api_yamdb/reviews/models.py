@@ -133,10 +133,11 @@ class ReviewAndComment(models.Model):
         verbose_name='Автор'
     )
     pub_date = models.DateTimeField(auto_now_add=True)
+    text = models.TextField('Текст')
 
     class Meta:
         abstract = True
-        ordering = ['-pub_date']
+        ordering = ('-pub_date',)
         default_related_name = "%(class)s"
         verbose_name = '%(class)s'
 
@@ -146,7 +147,6 @@ class Review(ReviewAndComment):
         Title, on_delete=models.CASCADE,
         verbose_name='Произведение'
     )
-    text = models.TextField('Текст')
     score = models.PositiveSmallIntegerField(
         validators=(MinValueValidator(1),
                     MaxValueValidator(10)),
@@ -161,6 +161,8 @@ class Review(ReviewAndComment):
                 name='unique_author_review'
             )
         ]
+        default_related_name = 'review'
+        verbose_name = 'Ревью'
 
     def __str__(self):
         return self.text[0:15]
@@ -171,10 +173,10 @@ class Comment(ReviewAndComment):
         Review, on_delete=models.CASCADE,
         verbose_name='Отзыв'
     )
-    text = models.TextField(max_length=300)
 
     class Meta(ReviewAndComment.Meta):
-        pass
+        default_related_name = 'comment'
+        verbose_name = 'Коментарий'
 
     def __str__(self):
         return self.text[0:15]

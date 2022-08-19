@@ -8,7 +8,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from api.permissions import IsAdmin, OwnerOrAdmin, IsAdminOrReadOnly
+from api.permissions import IsAdmin, IsOwnerOrAdminOrReadOnly, IsAdminOrReadOnly
 from api.serializers import (
     CategorySerializer, CommentSerializer, GenreSerializer,
     RegisterDataSerializer, ReviewSerializer, TitleSerializerGet,
@@ -58,12 +58,7 @@ def get_jwt_token(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-def get_title(self):
-    return get_object_or_404(Title, id=self.kwargs.get('title_id'))
 
-
-def get_review(self):
-    return get_object_or_404(Review, id=self.kwargs.get('review_id'))
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -101,25 +96,30 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = (OwnerOrAdmin,)
+    permission_classes = (IsOwnerOrAdminOrReadOnly,)
+
+    def get_title(self):
+        return get_object_or_404(Title, id=self.kwargs.get('title_id'))
 
     def get_queryset(self):
-        return get_title(self).review.all()
+        return self.get_title().review.all()
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user, title=get_title(self))
+        serializer.save(author=self.request.user, title=self.get_title())
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = (OwnerOrAdmin,)
-    queryset = Comment.objects.all()
+    permission_classes = (IsOwnerOrAdminOrReadOnly,)
+
+    def get_review(self):
+        return get_object_or_404(Review, id=self.kwargs.get('review_id'))
 
     def get_queryset(self):
-        return get_review(self).comment.all()
+        return self.get_review().comment.all()
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user, review=get_review(self))
+        serializer.save(author=self.request.user, review=self.get_review())
 
 
 class CategoryViewSet(GetPostDeleteViewSet):
