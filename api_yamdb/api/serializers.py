@@ -97,6 +97,17 @@ class GenreSerializer(serializers.ModelSerializer):
         exclude = ('id',)
 
 
+class TitleSerializerGet(serializers.ModelSerializer):
+    category = CategorySerializer()
+    genre = GenreSerializer(many=True)
+    rating = serializers.IntegerField(default=0)
+
+    class Meta:
+        model = Title
+        fields = '__all__'
+        read_only_fields = ('__all__',)
+
+
 class TitleSerializerPost(serializers.ModelSerializer):
     category = SlugRelatedField(
         slug_field='slug',
@@ -111,17 +122,9 @@ class TitleSerializerPost(serializers.ModelSerializer):
         validators=[MaxValueValidator(timezone.now().year)],
     )
 
-    class Meta:
-        model = Title
-        fields = '__all__'
-
-
-class TitleSerializerGet(serializers.ModelSerializer):
-    category = CategorySerializer()
-    genre = GenreSerializer(many=True)
-    rating = serializers.IntegerField()
+    def to_representation(self, value):
+        return TitleSerializerGet(self.instance).data
 
     class Meta:
         model = Title
         fields = '__all__'
-        read_only_fields = ('__all__',)
