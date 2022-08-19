@@ -6,6 +6,7 @@ from django.core.validators import (
     RegexValidator
 )
 from django.db import models
+from django.utils import timezone
 from rest_framework import serializers
 
 from api_yamdb.settings import DEFAULT_EMAIL_LENGTH, DEFAULT_FIELD_LENGTH
@@ -114,10 +115,9 @@ class Title(models.Model):
     name = models.CharField(
         max_length=settings.MAX_LENGTH_NAME,
         verbose_name='Название')
-    year = models.SmallIntegerField(
+    year = models.PositiveSmallIntegerField(
         default=1,
-        validators=[MaxValueValidator(3000),
-                    MinValueValidator(1)],
+        validators=[MaxValueValidator(timezone.now().year)],
         verbose_name='Год'
     )
     category = models.ForeignKey(

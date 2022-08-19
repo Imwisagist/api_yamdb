@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
@@ -106,7 +107,9 @@ class TitleSerializerPost(serializers.ModelSerializer):
         queryset=Genre.objects.all(),
         many=True
     )
-    year = serializers.IntegerField(min_value=1, max_value=3000)
+    year = serializers.IntegerField(
+        validators=[MaxValueValidator(timezone.now().year)],
+    )
 
     class Meta:
         model = Title
