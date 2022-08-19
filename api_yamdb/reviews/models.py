@@ -138,8 +138,6 @@ class ReviewAndComment(models.Model):
     class Meta:
         abstract = True
         ordering = ('-pub_date',)
-        default_related_name = "%(class)s"
-        verbose_name = '%(class)s'
 
 
 class Review(ReviewAndComment):
