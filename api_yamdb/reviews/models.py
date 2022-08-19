@@ -71,7 +71,7 @@ class NameSlugModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ['name']
+        ordering = ('name',)
 
     def __str__(self):
         return f'{self.name}'
@@ -114,6 +114,9 @@ class Title(models.Model):
         verbose_name='Жанр',
     )
     description = models.TextField(verbose_name='Описание')
+
+    class Meta(NameSlugModel.Meta):
+        verbose_name = 'Произведения'
 
     def __str__(self):
         return f'{self.name}'
