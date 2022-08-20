@@ -42,3 +42,4 @@ admin.site.register(Title, TitleAdmin)
 admin.site.register(User, UserAdmin)
 admin.site.register(Review, ReviewAdmin)
 admin.site.register(Comment, CommentAdmin)
+
