@@ -103,12 +103,14 @@ class NameSlugModel(models.Model):
 
 class Category(NameSlugModel):
     class Meta(NameSlugModel.Meta):
-        verbose_name = 'Категории'
+        verbose_name = 'Категория'
+        verbose_name_plural = 'Категории'
 
 
 class Genre(NameSlugModel):
     class Meta(NameSlugModel.Meta):
-        verbose_name = 'Жанры'
+        verbose_name = 'Жанр'
+        verbose_name_plural = 'Жанры'
 
 
 def get_year():
@@ -144,7 +146,9 @@ class Title(models.Model):
 
     class Meta:
         ordering = ('name',)
-        verbose_name = 'Произведения'
+        verbose_name = 'Произведение'
+        verbose_name_plural = 'Произведения'
+
 
     def __str__(self):
         return f'{self.name}'
