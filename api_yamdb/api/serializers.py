@@ -9,6 +9,7 @@ from rest_framework.validators import UniqueValidator
 from api_yamdb.settings import DEFAULT_EMAIL_LENGTH, DEFAULT_FIELD_LENGTH
 from reviews.models import (Category, Comment, Genre, Review,
                             Title, User, UsernameValidatorMixin)
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class UserSerializer(serializers.ModelSerializer, UsernameValidatorMixin):
@@ -49,16 +50,12 @@ class TokenSerializer(serializers.Serializer, UsernameValidatorMixin):
     )
 
 
-class ScoreSerializer(serializers.Serializer):
-    score = serializers.IntegerField(
-        validators=(MinValueValidator(1),
-                    MaxValueValidator(10)))
-
-
 class ReviewSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(slug_field='username', read_only=True)
     title = SlugRelatedField(slug_field='name', read_only=True)
-    score = ScoreSerializer
+    score = serializers.IntegerField(
+        validators=(MinValueValidator(1),
+                    MaxValueValidator(10)))
 
     class Meta:
         fields = '__all__'
