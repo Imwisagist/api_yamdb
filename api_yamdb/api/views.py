@@ -136,15 +136,8 @@ class TitleViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = TitleFilter
     ordering_fields = ('name',)
-    ordering = ('name',)
-    action_serializer_classes = {"create": TitleSerializerPost,
-                                 "update": TitleSerializerPost,
-                                 "retrieve": TitleSerializerGet,
-                                 "list": TitleSerializerGet,
-                                 "partial_update": TitleSerializerPost}
 
     def get_serializer_class(self):
-        try:
-            return self.action_serializer_classes[self.action]
-        except (KeyError, AttributeError):
-            return super(TitleViewSet, self).get_serializer_class()
+        if self.action == 'retrieve' or self.action == 'list':
+            return TitleSerializerGet
+        return TitleSerializerPost

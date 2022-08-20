@@ -1,11 +1,12 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
 
-from api_yamdb.settings import *
+from api_yamdb.settings import DEFAULT_EMAIL_LENGTH, DEFAULT_FIELD_LENGTH
 from reviews.models import (Category, Comment, Genre, Review,
                             Title, User, UsernameValidatorMixin)
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -97,6 +98,17 @@ class GenreSerializer(serializers.ModelSerializer):
         exclude = ('id',)
 
 
+class TitleSerializerGet(serializers.ModelSerializer):
+    category = CategorySerializer()
+    genre = GenreSerializer(many=True)
+    rating = serializers.IntegerField(default=0)
+
+    class Meta:
+        model = Title
+        fields = '__all__'
+        read_only_fields = ('__all__',)
+
+
 class TitleSerializerPost(serializers.ModelSerializer):
     category = SlugRelatedField(
         slug_field='slug',
@@ -107,19 +119,13 @@ class TitleSerializerPost(serializers.ModelSerializer):
         queryset=Genre.objects.all(),
         many=True
     )
-    year = serializers.IntegerField(min_value=1, max_value=3000)
+    year = serializers.IntegerField(
+        validators=[MaxValueValidator(timezone.now().year)],
+    )
+
+    def to_representation(self, value):
+        return TitleSerializerGet(self.instance).data
 
     class Meta:
         model = Title
         fields = '__all__'
-
-
-class TitleSerializerGet(serializers.ModelSerializer):
-    category = CategorySerializer()
-    genre = GenreSerializer(many=True)
-    rating = serializers.IntegerField()
-
-    class Meta:
-        model = Title
-        fields = '__all__'
-        read_only_fields = ('__all__',)

@@ -6,9 +6,10 @@ from django.core.validators import (
     RegexValidator
 )
 from django.db import models
+from django.utils import timezone
 from rest_framework import serializers
 
-from api_yamdb.settings import *
+from api_yamdb.settings import DEFAULT_EMAIL_LENGTH, DEFAULT_FIELD_LENGTH
 
 
 class UsernameValidatorMixin:
@@ -94,7 +95,7 @@ class NameSlugModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('name', )
+        ordering = ('name',)
 
     def __str__(self):
         return f'{self.name}'
@@ -114,10 +115,9 @@ class Title(models.Model):
     name = models.CharField(
         max_length=settings.MAX_LENGTH_NAME,
         verbose_name='Название')
-    year = models.SmallIntegerField(
+    year = models.PositiveSmallIntegerField(
         default=1,
-        validators=[MaxValueValidator(3000),
-                    MinValueValidator(1)],
+        validators=[MaxValueValidator(timezone.now().year)],
         verbose_name='Год'
     )
     category = models.ForeignKey(
@@ -137,6 +137,9 @@ class Title(models.Model):
         verbose_name='Жанр',
     )
     description = models.TextField(verbose_name='Описание')
+
+    class Meta(NameSlugModel.Meta):
+        verbose_name = 'Произведения'
 
     def __str__(self):
         return f'{self.name}'
