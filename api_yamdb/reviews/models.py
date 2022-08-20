@@ -73,7 +73,7 @@ class User(AbstractUser, UsernameValidatorMixin):
 
     USERNAME_FIELD = 'email'
 
-    REQUIRED_FIELDS = ['username', 'email']
+    REQUIRED_FIELDS = ['username']
 
     class Meta:
         ordering = ('id', )
