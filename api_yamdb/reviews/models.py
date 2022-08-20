@@ -111,13 +111,17 @@ class Genre(NameSlugModel):
         verbose_name = 'Жанры'
 
 
+def get_year():
+    return timezone.now().year
+
+
 class Title(models.Model):
     name = models.CharField(
         max_length=settings.MAX_LENGTH_NAME,
         verbose_name='Название')
     year = models.PositiveSmallIntegerField(
         default=1,
-        validators=[MaxValueValidator(timezone.now().year)],
+        validators=[MaxValueValidator(get_year)],
         verbose_name='Год'
     )
     category = models.ForeignKey(
@@ -138,7 +142,8 @@ class Title(models.Model):
     )
     description = models.TextField(verbose_name='Описание')
 
-    class Meta(NameSlugModel.Meta):
+    class Meta:
+        ordering = ('name',)
         verbose_name = 'Произведения'
 
     def __str__(self):

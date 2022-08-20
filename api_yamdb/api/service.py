@@ -1,6 +1,7 @@
 from django_filters import rest_framework
 from rest_framework import filters, mixins, viewsets
 
+from .permissions import IsAdminOrReadOnly
 from reviews.models import Title
 from .permissions import IsAdminOrReadOnly
 
