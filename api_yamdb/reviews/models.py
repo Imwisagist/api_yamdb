@@ -161,6 +161,7 @@ class Review(ReviewAndComment):
         ]
         default_related_name = 'review'
         verbose_name = 'Ревью'
+        verbose_name_plural = 'Ревью'
 
     def __str__(self):
         return self.text[0:15]
@@ -175,6 +176,7 @@ class Comment(ReviewAndComment):
     class Meta(ReviewAndComment.Meta):
         default_related_name = 'comment'
         verbose_name = 'Коментарий'
+        verbose_name_plural = 'Коментарии'
 
     def __str__(self):
-        return self.text[0:15]
+        return self.text[0:30]
